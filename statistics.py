@@ -38,7 +38,7 @@ month_color = eval(config['color']['colored_month'])
 
 def graph(choice:str=None , plot_type:str =None):
     if plot_type is None:
-        print(f'Please specify Correct {plot_type}')
+        print(f'Please specify Correct Plot Type!!')
         return
     
     if True:
@@ -54,7 +54,7 @@ def graph(choice:str=None , plot_type:str =None):
             plt.tight_layout()
             plt.show()
             plt.pause(10) # wait for 10 sec
-            plt.close()        
+            plt.close('all')        
         elif plot_type == "Bar-Graph":
             plt.figure(figsize=[14,7])
             plt.bar(month_name, stats[choice], label=f'{choice} Revenue' , color= month_color.values())
@@ -63,6 +63,6 @@ def graph(choice:str=None , plot_type:str =None):
             plt.tight_layout()
             plt.show()
             plt.pause(10) # wait for 10 sec
-            plt.close()        
+            plt.close('all')        
 
 

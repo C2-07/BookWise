@@ -31,7 +31,7 @@ except ModuleNotFoundError as e:
 # IMPORTing ALL THE CSV's
 books = pd.read_csv(f"{root}\\csv\\books.csv" , index_col="BookID")
 user = pd.read_csv(f"{root}\\csv\\user.csv" , index_col="ID")
-requests = pd.read_csv(f"{root}\\csv\\requests.csv")
+requests = pd.read_csv(f"{root}\\csv\\requests.csv" , index_col="Request ID")
 borrow = pd.read_csv(f"{root}\\csv\\borrow.csv")
 stats = pd.read_csv(f"{root}\\csv\\statics.csv")
 #----------Paths----------------#
@@ -40,14 +40,17 @@ class Library:
     #Constructor
     username = None
     def __init__(self):
-         person = Library.options(["Admin" , "User"])
-         Library.seprator("WELCOME TO NESX LIBRARY")
-         Library.username = input("Name : ")
-         Library.seprator()
-         if person == "Admin":
-             Library.admin_menu()
-         else:
-             Library.user_menu()
+        person = Library.options(["Admin" , "User"])
+        Library.seprator("WELCOME TO NESX LIBRARY")
+        Library.username = input("Name : ")
+
+        if Library.username == '':
+            Library.username = None
+        Library.seprator()
+        if person == "Admin":
+            Library.admin_menu()
+        else:
+            Library.user_menu()
 
     # OUTPUT Beautification
     @staticmethod
@@ -80,11 +83,10 @@ class Library:
         if isinstance(data, pd.core.frame.Series):
             table = tabulate(data.to_frame() , headers=["Attribute" , "Value"], showindex=index, tablefmt="presto")
         elif isinstance(data , pd.core.frame.DataFrame):
-            table = tabulate(data , headers="keys", showindex=index , tablefmt="presto")
+            table = tabulate(data , headers="keys" , tablefmt="presto")
         elif isinstance(data, dict):
             table = tabulate(data , headers="keys", showindex=index , tablefmt="presto")
         elif isinstance(data, list):
-            # data = dict(enumerate(data , start=1))
             table = tabulate(data , headers=["Search Result"], showindex=index , tablefmt="presto")
         else:
             print("Please make sure *data* is DataFrame , Series , Dict")
@@ -116,7 +118,7 @@ class Library:
         else:
             print("Please make sure *data* is DataFrame , Series , Dict")
 
-        def selection():
+        def select():
             option_dict = dict(enumerate(options,start=1))
             for key,value in option_dict.items():
                 print(f"[{key}] {value}")
@@ -126,19 +128,20 @@ class Library:
             except ValueError:
                 Library.seprator()
                 print("ValueError Enter Integer Only!!")
-                return
+                Library.seprator()
+                return select()
             Library.seprator()
             result = option_dict.get(choice,"\nPlease Enter Right Number")
             if result != "\nPlease Enter Right Number":
                 return result
             else:
                 print(f"{result}\n")
-                return selection()
-        return selection()
+                return select()
+        return select()
 
     # table selector
     @staticmethod
-    def selection(table: pd.Series = None) -> list:
+    def table_name_selection(table: pd.Series = None) -> str:
         """uses global to build reverse relation between keys and values"""
         tables = {"Books":books,"User":user,"Borrow":borrow ,"Request":requests}
         if table is None:
@@ -150,7 +153,7 @@ class Library:
     
     #searching...
     @staticmethod
-    def search(table:pd.DataFrame =None, column:str =None, item_search:str =None, display:bool =False):
+    def search(table:pd.DataFrame =None, column:str =None, item_search:str =None, display:bool =False , select_result=False):
         """
         args:
             table:pd.DataFrame, column:str, item_search:str, display:bool
@@ -158,21 +161,30 @@ class Library:
         for column name(do same in case of table , item). if the display = True then the result matching
         the query will be shown. default:False (will not be shown)
         """
-        table , column = Library.null_handler(table,column)
+        if table is None:
+            table = Library.table_select(table)
+        if column is None:
+            column = Library.options(table.columns.tolist())
         if item_search is None: 
             try:   
                 item_search = input(f"Enter {column} : ")
             except:
+                Library.seprator()
                 print("ValueError: Please Enter Integer Only")
+                Library.seprator()
                 return
         Library.seprator()
         match = [item for item in table[column] if re.search(item_search ,item ,re.IGNORECASE)]
         if display: #Check If Display = True
             if match: #if
-                for i in match:
-                    print(i)
+                if select_result:
+                    result_choice = Library.options(match)
+                    return result_choice
+                else:
+                    for i in match:
+                        print(i)
             else:
-                print("No Match Found For The Book.")
+                print("No Match Found!!")
     
     # Suggestion
     @staticmethod
@@ -184,15 +196,13 @@ class Library:
     #subscription Checker
     @staticmethod
     def subs(name: str = None) -> str:
-        if name is not None:
-            match = Library.search(table=user,column="first_name" ,item_search=name)
-            if match:
+        if name is None:
+            name = Library.search(table=user,column="first_name" , display=True , select_result=True)
+            if name is not None:
                 name_index = user.index[user["first_name"]==name].tolist()[0]
                 print(f"Your Subscription will end on : {user.loc[name_index , 'subscription_status']}")
-            else:
-                print(f"Your Subscription will end on : {choice(user['subscription_status'].tolist())}")
         else:
-            print("ValueError")
+            print(f"Your Subscription will end on : {choice(user['subscription_status'].tolist())}")
 
     # Return Dtype of pandas Objects
     @staticmethod
@@ -215,7 +225,6 @@ class Library:
     # Make Requests for New Book
     @staticmethod
     def request(table: pd.DataFrame = None) -> None:
-        Library.seprator()
         book_request = input("Book Name : ")
         if book_request not in table["Title"].tolist():
             new_row = {'Title': book_request , "By User": Library.username}  # Create a dict W new row data
@@ -231,7 +240,7 @@ class Library:
     def edit(table: pd.DataFrame =None):
         """Uses pd.dataframe.at[] to change the value in csv and save it
         """
-        table , column = Library.head_tail(table ,column="False")
+        table= Library.head_tail(table)
         Library.seprator()
         try:
             index = int(input("Enter Index Number : "))
@@ -253,7 +262,7 @@ class Library:
     # Delete Value from CSV
     @staticmethod
     def delete(table:pd.DataFrame =None, choice:bool =False):
-        table , column = Library.head_tail(table , column="False")
+        table = Library.head_tail(table)
         Library.seprator()
 
         try:
@@ -272,14 +281,15 @@ class Library:
                     table.to_csv(f"{root}\\csv\\{table_name[0]}.csv")
         else:
             print("Please Enter Valid Index Number!!")
-            delete()
+            delete(table , choice)
 
     #Give Starting or Ending Values
     @staticmethod   
-    def head_tail(table:pd.DataFrame =None , column:str =None):
-        table , column = Library.null_handler(table,column)
+    def head_tail(table:pd.DataFrame =None):
+        table = Library.table_select(table)
         if choice:
             #head tail here refers to the head and tail of pandas
+            Library.seprator()
             print("View Starting[head] or Ending[Tail] Values?\n")
             head_or_tail = Library.options(["Head","Tail"])
             
@@ -294,27 +304,16 @@ class Library:
                 print(table.head(how_much))
             else:
                 print(table.tail(how_much))
-        return table , column
+        return table
     
     #Handles Null Value if table and Column is not specified
     @staticmethod
-    def null_handler(table:pd.DataFrame =None,column:str =None):
-        if table is None and column is None:
+    def table_select(table: pd.DataFrame = None):
+        if table is None:
             table = Library.selection()
-            column = Library.options(table.columns.tolist())
-            return table , column
-        elif table is None:
-            table = Library.selection()
-            if column == "False":
-                column= table.iloc[:,0]
-                return table , column
-            else:
-                return table
-        elif column is None:
-            column = Library.options(table.columns.tolist())
-            return column
+            return table
         else:
-            return table , column
+            return table
 
     # User Menu Recursion
     @staticmethod
@@ -333,7 +332,6 @@ class Library:
                 if option == "View Available Books":
                     all_books = books["Title"]
                     print(Library.tablefmt(all_books , index=True))
-                    Library.seprator()               
                 elif option == "Check availability a Book":
                     Library.search(table=books , column="Title" , display=True)
                 elif option =="Request Addition of a New Book":
@@ -343,7 +341,6 @@ class Library:
                 elif option == "Contact Library Staff":
                     Library.seprator("CONTACT DETAILS")
                     print("Mail : nesx@hub.com \n\nPhone Number : 69696xxxxx\n\nTele-Phone : 1321-3123-3123")
-                    Library.seprator()                
                 elif option == "Exit":
                     print("Ty For Visiting!!")
                     Library.seprator()
@@ -385,7 +382,7 @@ class Library:
                 else:
                     Library.delete(table=books)
             elif option == "Check Books Request":
-                print(Library.tablefmt(requests))
+                print(requests)
             elif option =="Users Fined":
                 print(Library.tablefmt(user[["first_name" , "last_name" , "Fine ($)"]]))
             elif option == "Books Borrowed By users":
@@ -413,6 +410,8 @@ class Library:
         else:
             exit(1)
 
-lib = Library()
+if __name__ == '__main__':
+    lib = Library()
 
 
+# WORK ON REQUEST Function Issue Relating to Unnamed Column appending to request.csv
