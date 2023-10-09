@@ -12,12 +12,13 @@ sys.path.append(root)
 # Changing Current Working Path
 os.chdir(root)
 
-#Graph Veiw Module
+#Graph Veiwing Module
 import statistics
 
 # Error Handling for ModuleNotFoundError
 try:
-    import pandas as pd , matplotlib.pyplot as plt
+    import pandas as pd 
+    import matplotlib.pyplot as plt
     import calendar
     from tabulate import tabulate
 
@@ -25,8 +26,12 @@ except ModuleNotFoundError as e:
     from module import setup
     setup.module_install()
     print("ALL SET , RESTART THE SCRIPT")
-    exit(1)
 
+finally:
+    import pandas as pd 
+    import matplotlib.pyplot as plt
+    import calendar
+    from tabulate import tabulate
 
 # IMPORTing ALL THE CSV's
 books = pd.read_csv(f"{root}\\csv\\books.csv" , index_col="BookID")
