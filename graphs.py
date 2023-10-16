@@ -1,10 +1,6 @@
-
-# coding: utf-8
-
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolor
-import numpy as np
 
 import time
 import os
