@@ -5,17 +5,19 @@ import os
 import csv
 from random import choice
 
-#Graph Veiwing Module
 import graphs
 
 import pandas as pd
 from tabulate import tabulate
 from art import *
 
+
+import warnings
+import pandas as pd
+warnings.filterwarnings('ignore', category=FutureWarning)
+
 #------------PATHS--------------#    
-# Saving The Current Working Dir of *File* to Root
 root = os.path.dirname(os.path.abspath(__file__))
-# Tells Python To Where to Look For modules
 sys.path.append(root)
 os.chdir(root)
 
@@ -39,22 +41,14 @@ def separator(heading: str = None):
 
 # Table Beautification
 def tablefmt(data:list | dict | pd.DataFrame | pd.Series , index=False , style='presto') -> tabulate:
-    """Formats a Pandas DataFrame or Series as a table.
-
-        Args:
-            data: A list, dict, DataFrame, or Series.
-
-        Returns:
-            A formatted table as a string.
-    """
     if isinstance(data, pd.core.frame.Series):
-        table = tabulate(data.to_frame() , headers=["Attribute" , "Value"], showindex=index, tablefmt=style , colalign=('right'))
+        table = tabulate(data.to_frame() , headers=["Attribute" , "Value"], showindex=index, tablefmt=style)
     elif isinstance(data , pd.core.frame.DataFrame):
-        table = tabulate(data , headers="keys" , tablefmt=style , colalign=('right'))
+        table = tabulate(data , headers="keys" , tablefmt=style)
     elif isinstance(data, dict):
-        table = tabulate(data , headers="keys", showindex=index , tablefmt=style , colalign=('right'))
+        table = tabulate(data , headers="keys", showindex=index , tablefmt=style)
     elif isinstance(data, list):
-        table = tabulate(data , headers=["Search Result"], showindex=index , tablefmt=style , colalign=('right'))
+        table = tabulate(data , headers=["Search Result"], showindex=index , tablefmt=style)
     else:
         print("Please make sure *data* is DataFrame , Series , Dict")
         return
@@ -62,17 +56,6 @@ def tablefmt(data:list | dict | pd.DataFrame | pd.Series , index=False , style='
 
 #Option Genrator
 def options(data:list | dict | pd.DataFrame | pd.Series):
-    """
-    Agrs:
-        data:A list , dict , pd.DataFrame , pd.Series
-
-    process:
-        convert arg *data* into list then you enumerate to create a dict
-        for (key , value) relation. At last using for loop to itrate over dict
-    
-    Returns:
-        A 
-    """
     if isinstance(data, pd.core.frame.Series):
         options = data.index.tolist()
     elif isinstance(data , pd.core.frame.DataFrame):
@@ -107,7 +90,6 @@ def options(data:list | dict | pd.DataFrame | pd.Series):
 
 # table selector
 def tableVarToString(table: pd.Series = None) -> str:
-    """uses global to build reverse relation between keys and values"""
     tables = {"Books":books,"User":user,"Borrow":borrow ,"Request":requests}
     if table is None:
         return tables.get(options(tables), books)
@@ -118,13 +100,6 @@ def tableVarToString(table: pd.Series = None) -> str:
 
 #searching...
 def search(table:pd.DataFrame =None, column:str =None, item_search:str =None, display:bool =False , select_result=False):
-    """
-    args:
-        table:pd.DataFrame, column:str, item_search:str, display:bool
-    process: This Function search the item in One particular column if column not specified it asks
-    for column name(do same in case of table , item). if the display = True then the result matching
-    the query will be shown. default:False (will not be shown)
-    """
     if table is None:
         table = table_select(table)
     if column is None:
@@ -149,6 +124,7 @@ def search(table:pd.DataFrame =None, column:str =None, item_search:str =None, di
                     print(i)
         else:
             print("No Match Found!!")
+            return None
 
 # Suggestion
 def suggest() -> str:
@@ -158,13 +134,11 @@ def suggest() -> str:
 
 #subscription Checker
 def subs(name: str = None) -> str:
-    if name is None:
-        name = search(table=user,column="first_name" , display=True , select_result=True)
-        if name is not None:
-            name_index = user.index[user["first_name"]==name].tolist()[0]
-            print(f"Your subscription will end on : {user.loc[name_index , 'subscription_status']}")
+    if name is not None:
+        name_index = user.index[user["first_name"]==name].tolist()[0]
+        print(f"{name}, Your subscription Status : {user.loc[name_index , 'subscription_status']}")
     else:
-        print(f"Your subscription will end on : {choice(user['subscription_status'].tolist())}")
+        print(f"You Don't have Any Subscription as it is a Guest Account!!")
 
 # Return Dtype of pandas Objects
 def dataType(table:pd.DataFrame=None,column:str=None , Index=None):
@@ -179,49 +153,57 @@ def dataType(table:pd.DataFrame=None,column:str=None , Index=None):
         if value=="" and Index is not None:
             value = table.at[Index,column]
     except ValueError:
-        print("Incorrect Input Type For Int or Float64 Type Value\n setting... Default")
+        print("\nIncorrect Input Type For Int or Float64 Type Value\n")
         value = table.at[Index,column]
     finally:
         return value
 
 def addRow(table=None):
     newRow = {}
+    table = table_select(table)
     csvName = tableVarToString(table=table)
-    
+    try:
+        index_name  = table.index.name 
+    except:
+        index_name = "ID"
     for col in table.columns.tolist():
         value = dataType(column=col , table=table)
         newRow[col] = value
         
     newRow_df = pd.DataFrame([newRow])
+    table.index.name = index_name
     table = pd.concat([table, newRow_df], ignore_index=True)
-    table.to_csv(f"{root}\\csv\\{csvName}.csv" , index=False)
+    table.to_csv(f"{root}\\csv\\{csvName}.csv" , index=True , index_label=index_name)
     separator('Done!!')
     table.index.name = 'Index'
     table.index = table.index + 1
     print(tablefmt(table))
     
 #Edit Value from CSV
-def editRow(table=None):
-    """Uses pd.dataframe.at[] to change the value in csv and save it
-    """
-    table= head_tail(table)
-    separator()
-    try:
-        index = int(input("Enter Index Number : "))
-    except ValueError:
+def editRow(table=None , editProfile = None):
+    if editProfile is None:
+        table= head_tail(table)
         separator()
-        print("ValueError: Please Enter Intger Only")
+        try:
+            index = int(input("Enter Index Number : "))
+        except ValueError:
+            separator()
+            print("ValueError: Please Enter Intger Only")
+            return
+    elif editProfile is not None:
+        index = table[table['first_name']==editProfile].index.tolist()[0]
+    else:
+        print('An Error Occured')
         return
+    
     table_name = tableVarToString(table)
     if index in table.index:
         for cols in table.columns.tolist():
             value = dataType(table, cols, index)
             table.at[index,cols] = value
         table.to_csv(f"{root}\\csv\\{table_name}.csv")
-        print(tablefmt(table))
         separator("Done!")
-        
-        return admin_menu()
+        print(tablefmt(table))
     else:
         print("Please Enter Valid Index Number!!")
 
@@ -290,26 +272,33 @@ def user_menu():
         "Check Your Library subscription",
         "Contact Library Staff",
         "Search Books by Author Name",
+        "Edit Your Profile",
         "Your Profile",
         "Exit"]
 
     choice = options(user_options) #choice function
     if choice:
         if choice == "View Available Books":
+            books.index = books.index + 1
             all_books = books["Title"]
             print(tablefmt(all_books , index=True))
         elif choice == "Check availability a Book":
-            search(table=books , column="Title" , display=True)
+            result = search(table=books , column="Title" , display=True , select_result=True)
+            print(tablefmt(books[books['Title']==result]))
         elif choice =="Request Addition of a New Book":
             addRow(table=requests)             
         elif choice == "Check Your Library subscription":
-            subs(name=username)              
+            result = search(table=user , column='first_name' , select_result=True , display=True)
+            subs(name=result)              
         elif choice == "Contact Library Staff":
             separator("CONTACT DETAILS")
             print("Mail : nesx@hub.com \n\nPhone Number : 69696xxxxx\n\nTele-Phone : 1321-3123-3123")
         elif choice == "Search Books by Author Name":
-            result = search(table=books, display=True ,column='Author')
-            print(result)
+            result = search(table=books, display=True ,column='Author' , select_result=True)
+            print(tablefmt(books[books['Author']==result]))
+        elif choice =="Edit Your Profile":
+            result = search(table=user , display=True ,select_result=True , column='first_name')
+            editRow(table=user , editProfile=result)
         elif choice == "Your Profile":
             result = search(table=user, display=True , select_result=True , column='first_name')
             print(tablefmt(user[user['first_name']==result],style='plain'))
@@ -339,6 +328,7 @@ def admin_menu():
         "Users Fined",
         "Add/Remove Book",
         "Check Books Request",
+        "Add Data into [Any]table",
         "Edit Data From [Any]table",
         "Delete Data From [Any]table",
         "Books Borrowed By users",
@@ -351,14 +341,16 @@ def admin_menu():
             addRow(table=books)
         else:
             deleteRow(table=books)
+    elif choice == "Add Data into [Any]table":
+        addRow()
     elif choice == "Check Books Request":
         print(requests)
     elif choice =="Users Fined":
-        print(tablefmt(user[["first_name" , "last_name" , "Fine ($)"]]))
+        print(user[["first_name" , "last_name" , "Fine ($)"]])
     elif choice == "Books Borrowed By users":
         borrowed_books = borrow[["user","borrowed"]]
         borrowed_books.index.name = "Index"
-        print(tablefmt(borrowed_books , index=True))
+        print(tablefmt(borrowed_books))
     elif choice=="Delete Data From [Any]table":
         deleteRow()
     elif choice=="Edit Data From [Any]table":
