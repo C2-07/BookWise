@@ -1,33 +1,30 @@
 #<-----------MODULES------------>
 import sys
-import re
 import os
 import csv
 from random import choice
 
-import graphs
-
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 from tabulate import tabulate
 from art import *
 
-
-import warnings
 import pandas as pd
-warnings.filterwarnings('ignore', category=FutureWarning)
-
 #------------PATHS--------------#    
 root = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(root)
 os.chdir(root)
 
-
 # IMPORTing ALL THE CSV's
-books = pd.read_csv(f"{root}\\csv\\books.csv" , index_col="BookID")
+books = pd.read_csv(f"{root}\\csv\\books.csv" , index_col="ID")
 user = pd.read_csv(f"{root}\\csv\\user.csv" , index_col="ID")
-requests = pd.read_csv(f"{root}\\csv\\requests.csv")
-borrow = pd.read_csv(f"{root}\\csv\\borrow.csv")
-stats = pd.read_csv(f"{root}\\csv\\statics.csv")
+requests = pd.read_csv(f"{root}\\csv\\requests.csv", index_col="ID")
+borrow = pd.read_csv(f"{root}\\csv\\borrow.csv", index_col="ID")
+stats = pd.read_csv(f"{root}\\csv\\stats.csv", index_col="ID")
+
+def updating_csv():
+    global books , user , requests , borrow , stats
 #----------Paths----------------#
 
 # OUTPUT Beautification
@@ -65,7 +62,7 @@ def options(data:list | dict | pd.DataFrame | pd.Series):
     elif isinstance(data, list):
         options = data
     else:
-        print("Please make sure *data* is DataFrame , Series , Dict")
+        print("Not a - DataFrame , Series , Dict")
 
     def select():
         option_dict = dict(enumerate(options,start=1))
@@ -92,30 +89,34 @@ def options(data:list | dict | pd.DataFrame | pd.Series):
 def tableVarToString(table: pd.Series = None) -> str:
     tables = {"Books":books,"User":user,"Borrow":borrow ,"Request":requests}
     if table is None:
-        return tables.get(options(tables), books)
+        print("No Table Inputed")
+        return None
     else:
         # Convert variable name to string using globals()
         var_name_str = [name for name, value in globals().items() if value is table]
         return var_name_str[0]
 
 #searching...
-def search(table:pd.DataFrame =None, column:str =None, item_search:str =None, display:bool =False , select_result=False):
+def search(table:pd.DataFrame =None, column:str =None, pattern:str =None, display:bool =False , select_result=False):
     if table is None:
         table = table_select(table)
     if column is None:
         column = options(table.columns.tolist())
-    if item_search is None: 
+    if pattern is None: 
         try:   
-            item_search = input(f"Enter {column} : ")
+            pattern = input(f"Enter {column} : ")
         except:
             separator()
-            print("ValueError: Please Enter Integer Only")
+            raise TypeError('Error : String Only')
             separator()
             return
     separator()
-    match = [item for item in table[column] if re.search(item_search ,item ,re.IGNORECASE)]
-    if display: #Check If Display = True
-        if match: #if
+    try:
+        match = [item for item in table[column] if pattern.lower() in item.lower()]
+    except TypeError:
+        pass
+    if display: # Check If Display = True
+        if match: # if any match found
             if select_result:
                 result_choice = options(match)
                 return result_choice
@@ -136,7 +137,10 @@ def suggest() -> str:
 def subs(name: str = None) -> str:
     if name is not None:
         name_index = user.index[user["first_name"]==name].tolist()[0]
-        print(f"{name}, Your subscription Status : {user.loc[name_index , 'subscription_status']}")
+        if name_index:
+            print(f"{name}, Your subscription Status : {user.loc[name_index , 'subscription_status']}")
+        else:
+            print("You're not a member")
     else:
         print(f"You Don't have Any Subscription as it is a Guest Account!!")
 
@@ -150,16 +154,16 @@ def dataType(table:pd.DataFrame=None,column:str=None , Index=None):
             value = int(input(f'Enter {column} : '))
         elif table[column].dtype == "float64":
             value = float(input(f'Enter {column} : '))
-        if value=="" and Index is not None:
+        if value is None and Index is not None:
             value = table.at[Index,column]
     except ValueError:
-        print("\nIncorrect Input Type For Int or Float64 Type Value\n")
+        print("\nInput Type Should be Int or Float64\n")
         value = table.at[Index,column]
     finally:
         return value
 
 def addRow(table=None):
-    newRow = {}
+    newRow = []
     table = table_select(table)
     csvName = tableVarToString(table=table)
     try:
@@ -167,21 +171,23 @@ def addRow(table=None):
     except:
         index_name = "ID"
     for col in table.columns.tolist():
-        value = dataType(column=col , table=table)
-        newRow[col] = value
-        
-    newRow_df = pd.DataFrame([newRow])
+        value = dataType(column=col, table=table)
+        newRow.append(value)
+    print(newRow)
+    table.loc[len(table)] = newRow
+    if len(newRow) == 1:
+        return
     table.index.name = index_name
-    table = pd.concat([table, newRow_df], ignore_index=True)
-    table.to_csv(f"{root}\\csv\\{csvName}.csv" , index=True , index_label=index_name)
+    table.to_csv(f"{root}\\csv\\{csvName}.csv")
     separator('Done!!')
-    table.index.name = 'Index'
+    table.index.name = 'ID'
     table.index = table.index + 1
     print(tablefmt(table))
-    
+    return table
+
 #Edit Value from CSV
-def editRow(table=None , editProfile = None):
-    if editProfile is None:
+def editRow(table=None , editProfile_of_name = None):
+    if editProfile_of_name is None:
         table= head_tail(table)
         separator()
         try:
@@ -190,8 +196,9 @@ def editRow(table=None , editProfile = None):
             separator()
             print("ValueError: Please Enter Intger Only")
             return
-    elif editProfile is not None:
-        index = table[table['first_name']==editProfile].index.tolist()[0]
+    elif editProfile_of_name is not None:
+        # tolist()[0] to assign the first value of list to index value
+        index = table[table['first_name']==editProfile_of_name].index.tolist()[0]
     else:
         print('An Error Occured')
         return
@@ -298,16 +305,19 @@ def user_menu():
             print(tablefmt(books[books['Author']==result]))
         elif choice =="Edit Your Profile":
             result = search(table=user , display=True ,select_result=True , column='first_name')
-            editRow(table=user , editProfile=result)
+            print(tablefmt(user[user['first_name']==result]))
+            if result is not None:
+                editRow(table=user , editProfile_of_name=result)
         elif choice == "Your Profile":
             result = search(table=user, display=True , select_result=True , column='first_name')
-            print(tablefmt(user[user['first_name']==result],style='plain'))
+            if result is not None:
+                print(tablefmt(user[user['first_name']==result]))
         elif choice == "Exit":
             print(text2art("Bybye, Thank You!!"))
             separator()
             exit(1)
-                
         separator()
+        updating_csv() # Updating CSV
         resume = input("Continue To Menu? [y/n] : ")
         separator()
         if resume == "n":
@@ -316,10 +326,59 @@ def user_menu():
         user_menu()
     else:
         return
+def graphs(choice , plot_type):
+    colored_month = {'January': 'lightcoral', 'February': 'steelblue', 'March': 'lavender', 'April': 'chartreuse', 'May': 'cyan', 'June': 'fuchsia', 'July': 'cornflowerblue', 'August': 'mediumturquoise', 'September': 'whitesmoke', 'October': 'rebeccapurple', 'November': 'crimson', 'December': 'lightslategray'}
+    month_name = list(colored_month.keys())
+    month_color = list(colored_month.values())
 
-def revenue(choice:str =None):
-    plot_type = options(['Line-Graph', 'Bar-Graph'])
-    graphs.draw(choice , plot_type)
+    def draw(choice:str=None , plot_type:str =None):
+        if plot_type == "Line-Graph":
+            plt.figure(figsize=[14,7])
+            plt.plot(stats[choice] , label=f'{choice} Revenue' , color ='purple')
+            plt.xlabel('Months' , size=14 , labelpad=10)
+            plt.ylabel('Revenue [₹]' , size=14 , labelpad=10)
+            plt.xticks( np.arange(0,12), month_name)
+            plt.legend()
+            plt.grid(True, which='both', color='black', linewidth=0.4)
+            plt.tight_layout()
+            plt.show()
+        elif plot_type == "Bar-Graph":
+            plt.figure(figsize=[14,7])
+            plt.bar(month_name, stats[choice], label=f'{choice} Revenue' , color= month_color)
+            plt.xlabel('Months' , size=14 , labelpad=10)
+            plt.ylabel('Revenue[₹]' , size=14 , labelpad=10)
+            plt.tight_layout()
+            plt.show()
+            return
+    draw(choice , plot_type)
+def aggregate(choice):
+    months  = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    opt = (options(['Maxium', 'Maxium','sum','Average']))
+    if opt=='Maxium':
+        maximum = max(stats[choice])
+        month = stats[stats[choice]==maximum]
+        print(f'{month}₹ {maximum}')
+    elif opt=='Minimum':
+        print('₹', min(stats[choice]))
+    elif opt=='Average':
+        average = int(round(sum(stats[choice])/12))
+        print('₹', average)
+    elif opt=='Sum':
+        print('₹', sum(stats[choice]))
+    elif opt=='':
+        ...
+    else:
+        ...
+def revenue():
+    opt = options(['Aggregate Functions' , 'Visualization'])
+    col_choice = options(stats.columns.tolist()[1:])
+    if opt == 'Visualization':
+        plot_type = options(['Line-Graph', 'Bar-Graph'])
+        graphs(col_choice , plot_type) # graphs Function
+
+    else:
+        aggregate(col_choice)
+
 
 # Admin Menu Recursion
 def admin_menu():
@@ -346,24 +405,25 @@ def admin_menu():
     elif choice == "Check Books Request":
         print(requests)
     elif choice =="Users Fined":
-        print(user[["first_name" , "last_name" , "Fine ($)"]])
+        user.index.name = 'Index'
+        user.index = user.index + 1
+        print(tablefmt(user[["first_name" , "last_name" , "Fine ($)"]]))
     elif choice == "Books Borrowed By users":
         borrowed_books = borrow[["user","borrowed"]]
         borrowed_books.index.name = "Index"
         print(tablefmt(borrowed_books))
     elif choice=="Delete Data From [Any]table":
-        deleteRow()
+        deleteRow() 
     elif choice=="Edit Data From [Any]table":
         editRow()
     elif choice == "Revenue":
-        option_list = stats.columns.tolist()[1:]
-        choice = options(option_list)
-        revenue(choice)
+        revenue()
     elif choice == "Exit":
         print(text2art("Bybye, Thank You!!"))
         separator()
         exit(1)
     separator()
+    updating_csv() # Updating CSV
     resume = input("Back To Menu? [y/n] : ")
     separator()
     if resume == "n":
@@ -372,11 +432,11 @@ def admin_menu():
 
 
 if __name__ == '__main__':
-
+    updating_csv()
     username = None
     separator()
     person = options(["Admin" , "User"])
-    separator("WELCOME TO NESX LIBRARY")
+    separator("WELCOME")
     username = input("Name : ")
 
     username = None if username == '' else username
@@ -386,4 +446,5 @@ if __name__ == '__main__':
         admin_menu()
     else:
         user_menu()
+
         
