@@ -1,7 +1,6 @@
 #<-----------MODULES------------>
 import sys
 import os
-import csv
 from random import choice
 
 import pandas as pd
@@ -10,7 +9,6 @@ import numpy as np
 from tabulate import tabulate
 from art import *
 
-import pandas as pd
 #------------PATHS--------------#    
 root = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(root)
@@ -42,7 +40,7 @@ def tablefmt(data:list | dict | pd.DataFrame | pd.Series , index=False , style='
         table = tabulate(data.to_frame() , headers=["Attribute" , "Value"], showindex=index, tablefmt=style)
     elif isinstance(data , pd.core.frame.DataFrame):
         table = tabulate(data , headers="keys" , tablefmt=style)
-    elif isinstance(data, dict):
+    elif isinstance(data, dict):    
         table = tabulate(data , headers="keys", showindex=index , tablefmt=style)
     elif isinstance(data, list):
         table = tabulate(data , headers=["Search Result"], showindex=index , tablefmt=style)
@@ -62,7 +60,7 @@ def options(data:list | dict | pd.DataFrame | pd.Series):
     elif isinstance(data, list):
         options = data
     else:
-        print("Not a - DataFrame , Series , Dict")
+        print("Not a -> DataFrame , Series , Dict")
 
     def select():
         option_dict = dict(enumerate(options,start=1))
@@ -86,7 +84,7 @@ def options(data:list | dict | pd.DataFrame | pd.Series):
     return select()
 
 # table selector
-def tableVarToString(table: pd.Series = None) -> str:
+def tableVarToString(table = None) -> str:
     tables = {"Books":books,"User":user,"Borrow":borrow ,"Request":requests}
     if table is None:
         print("No Table Inputed")
@@ -97,7 +95,7 @@ def tableVarToString(table: pd.Series = None) -> str:
         return var_name_str[0]
 
 #searching...
-def search(table:pd.DataFrame =None, column:str =None, pattern:str =None, display:bool =False , select_result=False):
+def search(table=None, column:str =None, pattern:str =None, display:bool =False , select_result:str=False):
     if table is None:
         table = table_select(table)
     if column is None:
@@ -127,14 +125,8 @@ def search(table:pd.DataFrame =None, column:str =None, pattern:str =None, displa
             print("No Match Found!!")
             return None
 
-# Suggestion
-def suggest() -> str:
-    separator()
-    print(f"Suggestation : {choice(books['Title'].tolist())}")
-    separator()
-
 #subscription Checker
-def subs(name: str = None) -> str:
+def subscription(name: str = None):
     if name is not None:
         name_index = user.index[user["first_name"]==name].tolist()[0]
         if name_index:
@@ -145,7 +137,7 @@ def subs(name: str = None) -> str:
         print(f"You Don't have Any Subscription as it is a Guest Account!!")
 
 # Return Dtype of pandas Objects
-def dataType(table:pd.DataFrame=None,column:str=None , Index=None):
+def dataType(table=None,column:str=None , Index=None):
     value = None
     try:
         if table[column].dtype == "object":
@@ -242,8 +234,7 @@ def deleteRow(table:pd.DataFrame =None, choice:bool =False):
 def head_tail(table=None):
     table = table_select(table)
     separator()
-    #head tail here refers to the head and tail of pandas
-    print("View Starting[head] or Ending[Tail] Values?\n")
+    #head tail here refers to the head and tail method of pandas
     head_or_tail = options(["Head","Tail"])
 
     try:
@@ -270,6 +261,60 @@ def table_select(table: pd.DataFrame = None):
     else:
         return table
 
+def graphs(choice , plot_type):
+    colored_month = {'January': 'lightcoral', 'February': 'steelblue', 'March': 'lavender', 'April': 'chartreuse', 'May': 'cyan', 'June': 'fuchsia', 'July': 'cornflowerblue', 'August': 'mediumturquoise', 'September': 'whitesmoke', 'October': 'rebeccapurple', 'November': 'crimson', 'December': 'lightslategray'}
+    month_name = list(colored_month.keys())
+    month_color = list(colored_month.values())
+
+    def draw(choice:str=None , plot_type:str =None):
+        if plot_type == "Line-Graph":
+            plt.figure(figsize=[14,7])
+            plt.plot(stats[choice] , label=f'{choice} Revenue' , color ='purple')
+            plt.xlabel('Months' , size=14 , labelpad=10)
+            plt.ylabel('Revenue [₹]' , size=14 , labelpad=10)
+            plt.xticks( np.arange(0,12), month_name)
+            plt.legend()
+            plt.grid(True, which='both', color='black', linewidth=0.4)
+            plt.tight_layout()
+            plt.show()
+        elif plot_type == "Bar-Graph":
+            plt.figure(figsize=[14,7])
+            plt.bar(month_name, stats[choice], label=f'{choice} Revenue' , color= month_color)
+            plt.xlabel('Months' , size=14 , labelpad=10)
+            plt.ylabel('Revenue[₹]' , size=14 , labelpad=10)
+            plt.tight_layout()
+            plt.show()
+            return
+    draw(choice , plot_type)
+def aggregate(choice):
+    months  = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    opt = options(['Sum','Maxium', 'Maxium','Average'])
+    print(opt , 'Value is :')
+    if opt=='Maxium':
+        maximum = max(stats[choice])
+        month = months[stats[stats[choice]==maximum].index.tolist()[0]]
+        print(f'{month} -> ₹{maximum}')
+    elif opt=='Minimum':
+        minimum = min(stats[choice])
+        month = months[stats[stats[choice]==minimum].index.tolist()[0]]
+        print(f'{month} -> ₹{maximum}')
+    elif opt=='Average':
+        average = int(round(sum(stats[choice].tolist())/12))
+        print(f'Average Revenue : ₹{average}')
+    else:
+        total = sum(stats[choice].tolist())
+        print(f'Year -> ₹{total}')
+        
+def revenue():
+    opt = options(['Aggregate Functions' , 'Visualization'])
+    col_choice = options(stats.columns.tolist()[1:])
+    if opt == 'Visualization':
+        plot_type = options(['Line-Graph', 'Bar-Graph'])
+        graphs(col_choice , plot_type) # graphs Function
+
+    else:
+        aggregate(col_choice)
+        
 # User Menu Recursion
 def user_menu():     
     user_options = [
@@ -296,7 +341,7 @@ def user_menu():
             addRow(table=requests)             
         elif choice == "Check Your Library subscription":
             result = search(table=user , column='first_name' , select_result=True , display=True)
-            subs(name=result)              
+            subscription(name=result)              
         elif choice == "Contact Library Staff":
             separator("CONTACT DETAILS")
             print("Mail : nesx@hub.com \n\nPhone Number : 69696xxxxx\n\nTele-Phone : 1321-3123-3123")
@@ -326,59 +371,6 @@ def user_menu():
         user_menu()
     else:
         return
-def graphs(choice , plot_type):
-    colored_month = {'January': 'lightcoral', 'February': 'steelblue', 'March': 'lavender', 'April': 'chartreuse', 'May': 'cyan', 'June': 'fuchsia', 'July': 'cornflowerblue', 'August': 'mediumturquoise', 'September': 'whitesmoke', 'October': 'rebeccapurple', 'November': 'crimson', 'December': 'lightslategray'}
-    month_name = list(colored_month.keys())
-    month_color = list(colored_month.values())
-
-    def draw(choice:str=None , plot_type:str =None):
-        if plot_type == "Line-Graph":
-            plt.figure(figsize=[14,7])
-            plt.plot(stats[choice] , label=f'{choice} Revenue' , color ='purple')
-            plt.xlabel('Months' , size=14 , labelpad=10)
-            plt.ylabel('Revenue [₹]' , size=14 , labelpad=10)
-            plt.xticks( np.arange(0,12), month_name)
-            plt.legend()
-            plt.grid(True, which='both', color='black', linewidth=0.4)
-            plt.tight_layout()
-            plt.show()
-        elif plot_type == "Bar-Graph":
-            plt.figure(figsize=[14,7])
-            plt.bar(month_name, stats[choice], label=f'{choice} Revenue' , color= month_color)
-            plt.xlabel('Months' , size=14 , labelpad=10)
-            plt.ylabel('Revenue[₹]' , size=14 , labelpad=10)
-            plt.tight_layout()
-            plt.show()
-            return
-    draw(choice , plot_type)
-def aggregate(choice):
-    months  = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    opt = (options(['Maxium', 'Maxium','sum','Average']))
-    if opt=='Maxium':
-        maximum = max(stats[choice])
-        month = stats[stats[choice]==maximum]
-        print(f'{month}₹ {maximum}')
-    elif opt=='Minimum':
-        print('₹', min(stats[choice]))
-    elif opt=='Average':
-        average = int(round(sum(stats[choice])/12))
-        print('₹', average)
-    elif opt=='Sum':
-        print('₹', sum(stats[choice]))
-    elif opt=='':
-        ...
-    else:
-        ...
-def revenue():
-    opt = options(['Aggregate Functions' , 'Visualization'])
-    col_choice = options(stats.columns.tolist()[1:])
-    if opt == 'Visualization':
-        plot_type = options(['Line-Graph', 'Bar-Graph'])
-        graphs(col_choice , plot_type) # graphs Function
-
-    else:
-        aggregate(col_choice)
-
 
 # Admin Menu Recursion
 def admin_menu():
@@ -446,5 +438,3 @@ if __name__ == '__main__':
         admin_menu()
     else:
         user_menu()
-
-        

@@ -1,2 +1,0 @@
-colored_month = {'January': 'lightcoral', 'February': 'steelblue', 'March': 'lavender', 'April': 'chartreuse', 'May': 'cyan', 'June': 'fuchsia', 'July': 'cornflowerblue', 'August': 'mediumturquoise', 'September': 'whitesmoke', 'October': 'rebeccapurple', 'November': 'crimson', 'December': 'lightslategray'}
-print(list(colored_month.keys()))
