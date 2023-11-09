@@ -22,20 +22,22 @@ stats = pd.read_csv(f"{root}\\csv\\stats.csv", index_col="ID")
 
 
 def update_csv():
-    global books , user , requests , borrow , stats
+    global books, user, requests, borrow, stats
     books = pd.read_csv(f"{root}\\csv\\books.csv", index_col="ID")
     user = pd.read_csv(f"{root}\\csv\\user.csv", index_col="ID")
     requests = pd.read_csv(f"{root}\\csv\\requests.csv", index_col="ID")
     borrow = pd.read_csv(f"{root}\\csv\\borrow.csv", index_col="ID")
     stats = pd.read_csv(f"{root}\\csv\\stats.csv", index_col="ID")
 
+
 # ----------Paths----------------#
 
+
 # OUTPUT Beautification
-def separator(heading: str = None, decorate=True):
+def separator(heading: str = None, decorate = True):
     if heading is not None and decorate is True:
-        line = text2art(heading)
-        print('\n', line)
+        head = text2art(heading)
+        print(f'\n {head}')
         print('-' * 80 + '\n')
     elif heading is not None and decorate is False:
         print(f'\n{heading:-^80}\n')
@@ -106,6 +108,7 @@ def tableVarToString(table=None) -> str | None:
         var_name_str = [name for name, value in globals().items() if value is table]
         return var_name_str[0]
 
+
 # searching...
 def search(table=None, column: str = None, pattern: str = None, display: bool = False, select_result: bool = False):
     if table is None:
@@ -139,17 +142,19 @@ def search(table=None, column: str = None, pattern: str = None, display: bool = 
             print("No Match Found!!")
             return None
 
+
 # subscription Checker
 def subscription(name: str = None):
     if name is not None:
         name_index = user.index[user["first_name"] == name].tolist()[0]
-        separator(' SUBSCRIPTION STATUS ',decorate=False)
+        separator(' SUBSCRIPTION STATUS ', decorate=False)
         if name_index:
             print(f"{name}, Your subscription Status : {user.loc[name_index, 'subscription_status']}")
         else:
             print("You're not a member")
     else:
         print(f"You Don't have Any Subscription as it is a Guest Account!!")
+
 
 # Return Dtype of pandas Objects
 def dataType(table=None, column: str = None, Index=None):
@@ -169,11 +174,12 @@ def dataType(table=None, column: str = None, Index=None):
     finally:
         return value
 
+
 def addRow(table=None):
     newRow = []
     table = table_select(table)
     csvName = tableVarToString(table=table)
-    separator(' EXTEND DATA ',decorate=False)
+    separator(' EXTEND DATA ', decorate=False)
     try:
         index_name = table.index.name
     except:
@@ -192,6 +198,7 @@ def addRow(table=None):
     table.index = table.index + 1
     print(tablet(table))
     return table
+
 
 # Edit Value from CSV
 def editRow(table=None, editProfile_of_name=None):
@@ -222,10 +229,11 @@ def editRow(table=None, editProfile_of_name=None):
     else:
         print("Please Enter Valid Index Number!!")
 
+
 # Delete Value from CSV
 def deleteRow(table: pd.DataFrame = None, choice: bool = False):
     table = head_tail(table)
-    separator(' DELETE ',decorate=False)
+    separator(' DELETE ', decorate=False)
     try:
         index = int(input("Enter Index Number : "))
     except ValueError:
@@ -245,10 +253,11 @@ def deleteRow(table: pd.DataFrame = None, choice: bool = False):
         print("Please Enter Valid Index Number!!")
         deleteRow(table, choice)
 
-# Give Starting or Ending Values   
+
+# Give Starting or Ending Values
 def head_tail(table=None):
     table = table_select(table)
-    separator(' HEAD | TAIL ' , decorate=False)
+    separator(' HEAD | TAIL ', decorate=False)
     # head tail here refers to the head and tail method of pandas
     head_or_tail = options(["Head", "Tail"])
 
@@ -354,7 +363,7 @@ def user_menu():
         "Your Profile",
         "Exit"]
 
-    separator(' USER MENU ' , decorate=False)
+    separator(' USER MENU ', decorate=False)
     choice = options(user_options)  # choice function
     if choice == "View Available Books":
         books.index = books.index + 1
@@ -397,6 +406,7 @@ def user_menu():
         exit(1)
     user_menu()
 
+
 # Admin Menu Recursion
 def admin_menu():
     admin_options = [
@@ -409,7 +419,7 @@ def admin_menu():
         "Delete Data From [Any]table",
         "Books Borrowed By users",
         "Exit"]
-    separator(' ADMIN MENU ' , decorate=False)
+    separator(' ADMIN MENU ', decorate=False)
     choice = options(admin_options)  # choice function
     if choice == "Add/Remove Book":
         choice = options(["Add a Book", "Delete a Book"])
