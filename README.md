@@ -1,0 +1,3 @@
+# BookWise
+
+SCHOOL PROJECT FOR IP
