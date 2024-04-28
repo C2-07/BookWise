@@ -254,7 +254,7 @@ def deleteRow(table: pd.DataFrame = None, choice: bool = False):
         deleteRow(table, choice)
 
 
-# Give Starting or Ending Values +917978274272
+# Give Starting or Ending Values.
 def head_tail(table=None):
     table = table_select(table)
     separator(' HEAD | TAIL ', decorate=False)
